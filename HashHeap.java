@@ -1,22 +1,28 @@
+package edu.upenn.eCommerceCrawler;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
 public class HashHeap {
 	ArrayList<Integer> heap;
 	String mode;
-	int size_t;
+	int size;
 	HashMap<Integer, Node> hash;
 
 	class Node {
-		public Integer id;
-		public Integer num;
+		// index in heap
+		public Integer index;
+		public Integer count;
 
-		Node(Node now) {
-			id = now.id;
-			num = now.num;
+		Node(Node node) {
+			index = node.index;
+			count = node.count;
 		}
 
-		Node(Integer first, Integer second) {
+		Node(Integer index, Integer count) {
 
-			this.id = first;
-			this.num = second;
+			this.index = index;
+			this.count = count;
 		}
 	}
 
@@ -25,142 +31,142 @@ public class HashHeap {
 		heap = new ArrayList<Integer>();
 		mode = mod;
 		hash = new HashMap<Integer, Node>();
-		size_t = 0;
+		size = 0;
 	}
 
-	int peak() {
+	public int peak() {
 		return heap.get(0);
 	}
 
-	int size() {
-		return size_t;
+	public int size() {
+		return size;
 	}
 
-	Boolean empty() {
+	public Boolean empty() {
 		return (heap.size() == 0);
 	}
 
-	int parent(int id) {
-		if (id == 0) {
+	private int parent(int index) {
+		if (index == 0) {
 			return -1;
 		}
-		return (id - 1) / 2;
+		return (index - 1) / 2;
 	}
 
-	int left(int id) {
-		return id * 2 + 1;
+	private int left(int index) {
+		return index * 2 + 1;
 	}
 
-	int right(int id) {
-		return id * 2 + 2;
+	private int right(int index) {
+		return index * 2 + 2;
 	}
 
-	boolean comparesmall(int a, int b) {
+	private boolean needSwap(int a, int b) {
 		if (a <= b) {
 			if (mode == "min")
-				return true;
-			else
 				return false;
+			else
+				return true;
 		} else {
 			if (mode == "min")
-				return false;
-			else
 				return true;
+			else
+				return false;
 		}
 
 	}
 
-	void swap(int idA, int idB) {
-		int valA = heap.get(idA);
-		int valB = heap.get(idB);
+	private void swap(int indexA, int indexB) {
+		int valA = heap.get(indexA);
+		int valB = heap.get(indexB);
 
-		int numA = hash.get(valA).num;
-		int numB = hash.get(valB).num;
-		hash.put(valB, new Node(idA, numB));
-		hash.put(valA, new Node(idB, numA));
-		heap.set(idA, valB);
-		heap.set(idB, valA);
+		int countA = hash.get(valA).count;
+		int countB = hash.get(valB).count;
+		hash.put(valB, new Node(indexA, countB));
+		hash.put(valA, new Node(indexB, countA));
+		heap.set(indexA, valB);
+		heap.set(indexB, valA);
 	}
 
-	Integer poll() {
-		size_t--;
-		Integer now = heap.get(0);
-		Node hashnow = hash.get(now);
-		if (hashnow.num == 1) {
+	public Integer poll() {
+		size--;
+		Integer val = heap.get(0);
+		Node hashnow = hash.get(val);
+		if (hashnow.count == 1) {
 			swap(0, heap.size() - 1);
-			hash.remove(now);
+			hash.remove(val);
 			heap.remove(heap.size() - 1);
 			if (heap.size() > 0) {
-				siftdown(0);
+				downHeapify(0);
 			}
 		} else {
-			hash.put(now, new Node(0, hashnow.num - 1));
+			hash.put(val, new Node(0, hashnow.count - 1));
 		}
-		return now;
+		return val;
 	}
 
-	void add(int now) {
-		size_t++;
-		if (hash.containsKey(now)) {
-			Node hashnow = hash.get(now);
-			hash.put(now, new Node(hashnow.id, hashnow.num + 1));
-
+	public void add(int val) {
+		size++;
+		if (hash.containsKey(val)) {
+			Node hashnow = hash.get(val);
+			hash.put(val, new Node(hashnow.index, hashnow.count + 1));
 		} else {
-			heap.add(now);
-			hash.put(now, new Node(heap.size() - 1, 1));
+			heap.add(val);
+			hash.put(val, new Node(heap.size() - 1, 1));
 		}
 
-		siftup(heap.size() - 1);
+		upHeapify(heap.size() - 1);
 	}
 
-	void delete(int now) {
-		size_t--;
-		;
-		Node hashnow = hash.get(now);
-		int id = hashnow.id;
-		int num = hashnow.num;
-		if (hashnow.num == 1) {
+	// hashmap makes it O(logn) to delete element
+	public void delete(int val) {
+		size--;
+		Node node = hash.get(val);
+		int index = node.index;
+		int count = node.count;
+		if (node.count == 1) {
 
-			swap(id, heap.size() - 1);
-			hash.remove(now);
+			swap(index, heap.size() - 1);
+			hash.remove(val);
 			heap.remove(heap.size() - 1);
-			if (heap.size() > id) {
-				siftup(id);
-				siftdown(id);
+			if (heap.size() > index) {
+				upHeapify(index);
+				downHeapify(index);
 			}
 		} else {
-			hash.put(now, new Node(id, num - 1));
+			hash.put(val, new Node(index, count - 1));
 		}
 	}
 
-	void siftup(int id) {
-		while (parent(id) > -1) {
-			int parentId = parent(id);
-			if (comparesmall(heap.get(parentId), heap.get(id)) == true) {
+	private void upHeapify(int index) {
+		while (parent(index) > -1) {
+			int parent = parent(index);
+			if (!needSwap(heap.get(parent), heap.get(index))) {
 				break;
 			} else {
-				swap(id, parentId);
+				swap(index, parent);
 			}
-			id = parentId;
+			index = parent;
 		}
 	}
 
-	void siftdown(int id) {
-		while (left(id) < heap.size()) {
-			int leftId = left(id);
-			int rightId = right(id);
-			int son;
-			if (rightId >= heap.size() || (comparesmall(heap.get(leftId), heap.get(rightId)) == true)) {
-				son = leftId;
-			} else {
-				son = rightId;
+	private void downHeapify(int index) {
+		while (index < heap.size()) {
+			int left = left(index);
+			int right = right(index);
+			int son = index;
+			if (left < heap.size() && needSwap(heap.get(son), heap.get(left))) {
+				son = left;
 			}
-			if (comparesmall(heap.get(id), heap.get(son)) == true) {
+			if (right < heap.size() && needSwap(heap.get(son), heap.get(right))) {
+				son = right;
+			}
+			if (son != index) {
+				swap(index, son);
+				index = son;
+			} else {
 				break;
-			} else {
-				swap(id, son);
 			}
-			id = son;
 		}
 	}
 
