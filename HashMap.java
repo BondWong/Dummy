@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-public class HashTable<K, V> {
+public class HashMap<K, V> {
 	private static final int FILLINGRATE = 2;
 
 	private static class Entry<K, V> {
