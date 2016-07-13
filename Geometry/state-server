@@ -9,8 +9,10 @@ from cache import StateCache
 
 class StateRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
+    	# parse paramters
         parameters = self.parse() 
 
+        # parameter validation
         if parameters == None or len(parameters) == 0:
             self.bad_request()
             return
@@ -18,13 +20,16 @@ class StateRequestHandler(BaseHTTPRequestHandler):
             self.bad_request()
             return
 
+        # visit cache to get result
         stateCache = StateCache()
         state = stateCache.get(parameters['longitude'], parameters['latitude'])
+        result = json.dumps([state])
 
+        # write response
         self.send_header('content-type', 'application/json')
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(bytes(state, 'utf-8'))
+        self.wfile.write(bytes(result, 'utf-8'))
 
     def parse(self):
         length = int(self.headers['content-length'])
@@ -41,7 +46,7 @@ class StateRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 if __name__ == "__main__":
-    host = ''
+    host = '' # localhost
     port = 8080
 
     http_server = HTTPServer((host, port), StateRequestHandler)
