@@ -44,13 +44,26 @@ class StateCache(metaclass=Singleton):
             a = border[i]
             b = border[i + 1]
 
+            # calculate distance of vector
             A = getDistance(a[0], a[1], b[0], b[1]);
             B = getDistance(target[0], target[1], a[0], a[1])
             C = getDistance(target[0], target[1], b[0], b[1])
 
-            degree = degree + math.degrees(math.acos((B * B + C * C - A * A) / (2.0 * B * C)))
+            # calculate direction of vector
+            ta_x = a[0] - target[0]
+            ta_y = a[1] - target[1]
+            tb_x = b[0] - target[0]
+            tb_y = b[1] - target[1]
 
+            dot = tb_y * ta_x - tb_x * ta_y
+            clockwise = dot < 0
+            
+            # calculate sum of angles
+            if(clockwise):
+                degree = degree + math.degrees(math.acos((B * B + C * C - A * A) / (2.0 * B * C)))
+            else:
+                degree = degree - math.degrees(math.acos((B * B + C * C - A * A) / (2.0 * B * C)))
 
-        if(abs(round(degree) - 360) <= 5 or abs(round(degree) - 360 >= 0)):
+        if(abs(round(degree) - 360) <= 3):
             return True
         return False
