@@ -1,0 +1,7 @@
+Destination Filename:
+/home/bedrock/redis-3.0.7.tar.gz
+
+Execute Command:
+/bin/sh -c "cd /home/bedrock; tar -zxf redis-3.0.7.tar.gz; rm -rf redis-3.0.7.tar.gz; mv redis-3.0.7 redis; chown -R bedrock:bedrock redis; cd redis; echo '' | sudo -S make install; sudo mkdir /etc/redis; sudo mkdir /var/redis; sudo mkdir /var/redis/6379; sudo cp utils/redis_init_script /etc/init.d/redis_6379"
+
+
