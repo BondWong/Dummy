@@ -55,8 +55,8 @@ class StateCache(metaclass=Singleton):
             tb_x = b[0] - target[0]
             tb_y = b[1] - target[1]
 
-            dot = tb_y * ta_x - tb_x * ta_y
-            clockwise = dot < 0
+            cross = tb_y * ta_x - tb_x * ta_y
+            clockwise = cross < 0
             
             # calculate sum of angles
             if(clockwise):
