@@ -7,6 +7,47 @@ The `this` keyword works differently in JavaScript compared to other languages. 
 `this` equals to global object in Node.js. Global object is the object that contains a set of globally accessible objects in all modules. 
 
 `'use strict';
-console.log(this === global); \\ return true`
+console.log(this === global); // return true`
 
+## Function context
 
+`this` equals to whatever it was set to when entering the execution context. 
+`
+'use strict';
+function f() {
+  return this;
+}
+console.log(f() === global); // return true`
+
+When executing the function f, this was set to global, thus, the this inside the function is global.
+
+In arrow functions, `this` is set lexically. It is set to the value of the enclosing execution context's this.
+
+`var f2 = (() => this);
+console.log(f2() === this); // return true`
+
+The enclosing execution context in the above code is global context. Therefore, `this` is set to global. However, once the `this` in arrow function is set, it can not be changed anymore.
+
+`var obj = {f2: f2};
+console.log(obj.f2() === global); // return true`
+
+The above code shows that we put the arrow function f2 to an object, which means the closest enclosing context is object obj. However, f2's `this` is still what it was before.
+
+A more complicated example.
+
+`var obj = {bar: function() {
+	var x = (() => this);
+	return x;
+}};`
+
+The above arrow function's `this` is set to the `this` of the enclosing function. The enclosing function's `this`, in term, depends on what it was set to when entering its execution context.
+
+`var f3 = obj.bar();
+console.log(f3() === obj); // return true`
+
+The above codes calls obj's method. Therefore, `this` of the function is set to obj (will explain later). Since arrow function's `this` is set to the function's `this`, thus the comparison is true.
+
+`var f4 = obj.bar;
+console.log(f4()() === global)`
+
+f4 executes in global context, therefore, the enclosing function's `this` is set to global, and so does the arrow function's `this`.
