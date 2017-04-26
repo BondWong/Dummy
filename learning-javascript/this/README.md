@@ -51,3 +51,53 @@ The above codes calls obj's method. Therefore, `this` of the function is set to 
 console.log(f4()() === global)`
 
 f4 executes in global context, therefore, the enclosing function's `this` is set to global, and so does the arrow function's `this`.
+
+## In a constructor
+
+When you call `new SomeConstructor()`,  what `this` is depends on whether your constructor has a `return`. If it doesn't, the result of `new SomeConstructor()` is `this` the constructor constructs. If it does, the result is the returning object.
+
+`function SomeConstructor() {
+	this.a = 37;
+}
+var o = new SomeConstructor();
+console.log(o.a); // 37`
+
+The above constructor has no return statement, therefore, the result is the `this`. Note that when entering the constructor, `this` is set to `{}`. Unlike normal function, `this` is set to what it was set before entering the function.
+
+`function SomeConstructor2() {
+	this.a = 37;
+	return {a: 38};
+}
+o = new SomeConstructor2();
+console.log(o.a); // 38`
+
+The above constructor has return statement, therefore, the result is the returning object.
+
+## Setting this to a particular object
+
+### call and apply
+We can set `this` to particular object by using call and apply.
+
+`function add(c, d) {
+	return this.a + this.b + c + d;
+}
+var o = {a: 1, b: 3};
+// `this` is set to o, and the following sequent parameters are passed as arguments
+add.call(o, 5, 7); // 1 + 3 + 5 + 7 = 16
+// `this` is set to o, and the following list will be destructing to arguments
+add.apply(o, [10, 20]); // 1 + 3 + 10 + 20 = 34`
+
+### bind
+Different from `call` and `apply`, `bind` set `this` permanently.
+`function f() {
+	return this.a;
+}
+var g = f.bind({a: 'hi'});
+console.log(g()); // hi`
+
+var h = g.bind({a: 'hey'});
+console.log(h()); // hey
+
+var o = {a: 37, f: f, g: g, h: h};
+console.log(o.f(), o.g(), o.h()); // 37, hi, hi
+
