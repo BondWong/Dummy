@@ -3,7 +3,7 @@
 const network = require('./network.js');
 const state = require('./state.js');
 
-function Node (id, network) {
+function Node(id, network) {
   this.id = id;
   this.network = network;
 }
@@ -11,7 +11,7 @@ Node.prototype.handleRequest = function() {};
 Node.prototype.request = function(message) {
   this.network.broadcast(message.type, message);
 };
-Node.prototype.handleResponse = function(){};
+Node.prototype.handleResponse = function() {};
 Node.prototype.response = function() {};
 Node.prototype.listen = function(name, func) {
   this.network.listen(name, this, func);
@@ -23,7 +23,7 @@ function Client(id, network) {
 Client.prototype = Object.create(Node.prototype);
 Client.prototype.constructor = Client;
 Client.prototype.handleResponse = function(message) {
-  switch(message.type) {
+  switch (message.type) {
     case "success":
       console.log(message);
       break;
@@ -35,7 +35,10 @@ Client.prototype.handleResponse = function(message) {
 
 function Server(id, network, quorum) {
   Node.call(this, id, network);
-  this.data = {version: -1, value: 0};
+  this.data = {
+    version: -1,
+    value: 0
+  };
   this.localData = {};
   this.neighbors = [];
   this.quorum = quorum;
@@ -44,7 +47,7 @@ function Server(id, network, quorum) {
 Server.prototype = Object.create(Node.prototype);
 Server.prototype.constructor = Server;
 Server.prototype.handleRequest = function(message) {
-  switch(message.type) {
+  switch (message.type) {
     case "write":
       this.state.write(this, message);
       break;
@@ -60,7 +63,7 @@ Server.prototype.handleRequest = function(message) {
   }
 };
 Server.prototype.handleResponse = function(message) {
-  switch(message.type) {
+  switch (message.type) {
     case "promise":
     case "reject":
       this.state.handle(this, message);

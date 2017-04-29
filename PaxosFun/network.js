@@ -41,13 +41,13 @@ Network.prototype.register = function(name) {
 }
 
 Network.prototype.broadcast = function(name, message) {
-  if(this.listeners[name]) {
+  if (this.listeners[name]) {
     utils.wait(100).then(() => {
       var obj = this.listeners[name][message.to][0];
       console.log(message.type + " processId: " + message.processId + " " + ": from: " + message.from + " to: " + message.to);
       if (obj.constructor.name === 'Server') {
-        console.log("Destination: " + obj.constructor.name
-          + " state: " + obj.state.constructor.name + " data: " + JSON.stringify(obj.data));
+        console.log("Destination: " + obj.constructor.name +
+          " state: " + obj.state.constructor.name + " data: " + JSON.stringify(obj.data));
       } else {
         console.log("Destination: " + obj.constructor.name);
       }

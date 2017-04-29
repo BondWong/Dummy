@@ -3,13 +3,12 @@
 const network = require('./network.js');
 var exports = module.exports = {};
 
-function State() {
-}
-State.prototype.write = function(){};
-State.prototype.update = function(){};
-State.prototype.commit = function(){};
-State.prototype.cancel = function(){};
-State.prototype.handle = function(){};
+function State() {}
+State.prototype.write = function() {};
+State.prototype.update = function() {};
+State.prototype.commit = function() {};
+State.prototype.cancel = function() {};
+State.prototype.handle = function() {};
 
 function IdleState() {
   State.call(this);
@@ -44,27 +43,27 @@ function PrepareState() {
 }
 PrepareState.prototype = Object.create(State.prototype);
 PrepareState.prototype.constructor = PrepareState;
-PrepareState.prototype.write = function(server, message){
+PrepareState.prototype.write = function(server, message) {
   server.response(new network.Response(message.processId, "fail", message.to, message.from));
   return false;
 };
-PrepareState.prototype.update = function(server, message){
+PrepareState.prototype.update = function(server, message) {
   server.response(new network.Response(message.processId, "fail", message.to, message.from));
   return false;
 };
-PrepareState.prototype.handle = function(server, message){
-  if(!server["responses"]) {
+PrepareState.prototype.handle = function(server, message) {
+  if (!server["responses"]) {
     server["responses"] = [];
   }
-  message.type === "promise"? server["responses"].push(true): server["responses"].push(false);
+  message.type === "promise" ? server["responses"].push(true) : server["responses"].push(false);
   if (server["responses"].length == server.neighbors.length) {
     var promiseCnt = 0;
     server["responses"].forEach(function(response) {
-      if(response) {
+      if (response) {
         promiseCnt++;
       }
     });
-    if(promiseCnt == server.neighbors.length) {
+    if (promiseCnt == server.neighbors.length) {
       server.data = server.localData;
       server.neighbors.forEach(function(neighbor) {
         server.request(new network.Request(message.processId, message.data, "commit", server.id, neighbor.id));
@@ -96,7 +95,7 @@ ReadyState.prototype.update = function(server, message) {
   server.response(new network.Response(message.processId, "fail", message.to, message.from));
   return false;
 };
-ReadyState.prototype.commit = function(server, message){
+ReadyState.prototype.commit = function(server, message) {
   server.data = server.localData;
   server.state = new IdleState();
 };

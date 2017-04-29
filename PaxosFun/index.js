@@ -54,7 +54,10 @@ for (var i = 0; i < 5; i++) {
     }
 
     var sindex = parseInt(Math.random() * 9); // [1~9]
-    clients[cindex].request(new nw.Request(utils.getProcessId(), {version: utils.getVersion(), value: 1}, "write",
+    clients[cindex].request(new nw.Request(utils.getProcessId(), {
+        version: utils.getVersion(),
+        value: 1
+      }, "write",
       clients[cindex].id, servers[sindex].id));
   }, parseInt(Math.random() * 1000));
 }
