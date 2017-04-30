@@ -3,7 +3,6 @@
 function Visualizer() {
   this.svg = d3.select("body").append("svg:svg").attr("width", this.width)
     .attr("height", this.height);
-  this.serverRadiusSetp = (Math.PI * 2) / servers.length;
   this.serverMargin = this.serverWidth + 60;
   this.serverXScale = d3.scale.linear().domain([-1, 1]).range([this.serverMargin + (this.clientMargin * 2 + 20), this.width - this.serverMargin]);
   this.serverYScale = d3.scale.linear().domain([-1, 1]).range([this.serverMargin, this.height - this.serverMargin]);
@@ -17,8 +16,34 @@ Visualizer.prototype.width = 960;
 Visualizer.prototype.height = 680;
 Visualizer.prototype.clientMargin = 60;
 Visualizer.prototype.serverWidth = 30;
-Visualizer.prototype.responseWidth = 6;
-Visualizer.prototype.requestWidth = 20;
+Visualizer.prototype.messageWidth = 20;
+Visualizer.prototype.visualize = function(name, message) {
+  switch (message.constructor.name) {
+    case "Response":
+      this.drawMessage("#B3EECC", name, message);
+      break;
+    case "Request":
+      this.drawMessage("#ecb3ee", name, message);
+      break;
+  }
+}
+Visualizer.prototype.drawMessage = function(color, name, message) {
+  this.messageCircles = this.svg.selectAll("circle.message" + message.id)
+    .data([message.source]);
+  this.messageCircles.enter()
+    .append("svg:circle")
+    .attr("cx", function(d) {
+      return d.x;
+    })
+    .attr("cy", function(d) {
+      return d.y;
+    })
+    .attr("class", "message" + message.id)
+    .attr("r", this.messageWidth / 2)
+    .attr("fill", color);
+  return this.messageCircles.exit().remove();
+}
+
 Visualizer.prototype.drawServers = function(servers) {
   for (var i = 0, len = servers.length; i < len; i++) {
     servers[i].x = this.serverX(servers[i].id * (Math.PI * 2) / servers.length);
@@ -35,7 +60,7 @@ Visualizer.prototype.drawServers = function(servers) {
     }).attr("cy", function(server) {
       return server.y;
     });
-};
+}
 
 Visualizer.prototype.drawClients = function(clients) {
   for (var i = 0, len = clients.length; i < len; i++) {

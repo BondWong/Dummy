@@ -5,23 +5,23 @@ const nw = require('./network.js');
 const node = require('./node.js');
 
 var network = new nw.Network();
-network.register("write");
-network.register("update");
-network.register("promise");
-network.register("commit");
-network.register("cancel");
-network.register("reject");
-network.register("success");
-network.register("fail");
+network.register(nw.EVENTTYPE.WRITE);
+network.register(nw.EVENTTYPE.UPDATE);
+network.register(nw.EVENTTYPE.PROMISE);
+network.register(nw.EVENTTYPE.COMMIT);
+network.register(nw.EVENTTYPE.CANCEL);
+network.register(nw.EVENTTYPE.REJECT);
+network.register(nw.EVENTTYPE.SUCCESS);
+network.register(nw.EVENTTYPE.FAIL);
 
 var servers = [...Array(10).keys()].map(function() {
   var server = new node.Server(utils.getId(), network);
-  server.listen("write", "handleRequest");
-  server.listen("update", "handleRequest");
-  server.listen("promise", "handleResponse");
-  server.listen("reject", "handleResponse");
-  server.listen("commit", "handleRequest");
-  server.listen("cancel", "handleRequest");
+  server.listen(nw.EVENTTYPE.WRITE, "handleRequest");
+  server.listen(nw.EVENTTYPE.UPDATE, "handleRequest");
+  server.listen(nw.EVENTTYPE.PROMISE, "handleResponse");
+  server.listen(nw.EVENTTYPE.REJECT, "handleResponse");
+  server.listen(nw.EVENTTYPE.COMMIT, "handleRequest");
+  server.listen(nw.EVENTTYPE.CANCEL, "handleRequest");
   return server
 });
 
@@ -34,13 +34,13 @@ servers.forEach(function(server) {
 
 var clients = [(function() {
   var client = new node.Client(utils.getId(), network);
-  client.listen("success", "handleResponse");
-  client.listen("fail", "handleResponse");
+  client.listen(nw.EVENTTYPE.SUCCESS, "handleResponse");
+  client.listen(nw.EVENTTYPE.FAIL, "handleResponse");
   return client;
 })(), (function() {
   var client = new node.Client(utils.getId(), network);
-  client.listen("success", "handleResponse");
-  client.listen("fail", "handleResponse");
+  client.listen(nw.EVENTTYPE.SUCCESS, "handleResponse");
+  client.listen(nw.EVENTTYPE.FAIL, "handleResponse");
   return client;
 })()];
 
@@ -56,8 +56,8 @@ for (var i = 0; i < 5; i++) {
     var sindex = parseInt(Math.random() * 9); // [1~9]
     clients[cindex].request(new nw.Request(utils.getProcessId(), {
         version: utils.getVersion(),
-        value: 1
-      }, "write",
+        value: i
+      }, nw.EVENTTYPE.WRITE,
       clients[cindex].id, servers[sindex].id));
   }, parseInt(Math.random() * 1000));
 }

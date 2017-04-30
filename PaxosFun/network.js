@@ -4,6 +4,17 @@ const utils = require("./utils.js");
 
 var exports = module.exports = {};
 
+const EVENTTYPE = {
+  WRITE: "write",
+  UPDATE: "update",
+  PROMISE: "promise",
+  COMMIT: "commit",
+  CANCEL: "cancel",
+  REJECT: "reject",
+  SUCCESS: "success",
+  FAIL: "fail"
+};
+
 function Message(processId, type, from, to) {
   this.processId = processId;
   this.type = type;
@@ -26,6 +37,7 @@ Response.prototype.constructor = Response;
 
 function Network() {
   this.listeners = {};
+  this.latency = 100;
 }
 
 Network.prototype.listen = function(name, obj, func) {
@@ -42,7 +54,7 @@ Network.prototype.register = function(name) {
 
 Network.prototype.broadcast = function(name, message) {
   if (this.listeners[name]) {
-    utils.wait(100).then(() => {
+    utils.wait(this.latency).then(() => {
       var obj = this.listeners[name][message.to][0];
       console.log(message.type + " processId: " + message.processId + " " + ": from: " + message.from + " to: " + message.to);
       if (obj.constructor.name === 'Server') {
@@ -61,3 +73,4 @@ exports.Message = Message;
 exports.Request = Request;
 exports.Response = Response;
 exports.Network = Network;
+exports.EVENTTYPE = EVENTTYPE;

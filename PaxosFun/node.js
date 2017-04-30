@@ -24,10 +24,10 @@ Client.prototype = Object.create(Node.prototype);
 Client.prototype.constructor = Client;
 Client.prototype.handleResponse = function(message) {
   switch (message.type) {
-    case "success":
+    case network.EVENTTYPE.SUCCESS:
       console.log(message);
       break;
-    case "fail":
+    case network.EVENTTYPE.FAIL:
       console.log(message);
       break;
   }
@@ -48,24 +48,24 @@ Server.prototype = Object.create(Node.prototype);
 Server.prototype.constructor = Server;
 Server.prototype.handleRequest = function(message) {
   switch (message.type) {
-    case "write":
+    case network.EVENTTYPE.WRITE:
       this.state.write(this, message);
       break;
-    case "update":
+    case network.EVENTTYPE.UPDATE:
       this.state.update(this, message);
       break;
-    case "commit":
+    case network.EVENTTYPE.COMMIT:
       this.state.commit(this, message);
       break;
-    case "cancel":
+    case network.EVENTTYPE.CANCEL:
       this.state.cancel(this, message);
       break;
   }
 };
 Server.prototype.handleResponse = function(message) {
   switch (message.type) {
-    case "promise":
-    case "reject":
+    case network.EVENTTYPE.PROMISE:
+    case network.EVENTTYPE.REJECT:
       this.state.handle(this, message);
       break;
   }
