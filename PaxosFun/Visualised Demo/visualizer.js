@@ -9,8 +9,6 @@ function Visualizer() {
   this.clientXScale = this.clientMargin + 20;
   this.clientYScale = d3.scale.linear().domain([0, 1]).range([60 + this.clientMargin, this.height - (60 + this.clientMargin)]);
   this.pendingLinkLength = (this.requestWidth / 2) + (this.serverWidth / 2) * 1.07;
-  this.links = [];
-  this.nodes = [];
   this.serverCnt = 0;
   this.clientCnt = 0;
   this.colors = ["#B3EECC", "#ecb3ee"];
@@ -22,78 +20,62 @@ Visualizer.prototype.serverWidth = 30;
 Visualizer.prototype.messageWidth = 20;
 
 Visualizer.prototype.init = function(clients, servers) {
-  this.nodes = servers.concat(clients);
-  this.serverCnt = servers.length;
-  this.clientCnt = clients.length;
-  this.drawClients();
-  this.drawServers();
-  this.setupForceLayout();
+  servers.forEach((function(_this) {
+    return function(server) {
+      server.x = _this.serverX(server.id * (Math.PI * 2) / servers.length);
+      server.y = _this.serverY(server.id * (Math.PI * 2) / servers.length);
+      server.radius = _this.serverWidth / 2;
+      server.fixed = true;
+    }
+  })(this));
+
+  clients.forEach((function(_this) {
+    return function(client) {
+      client.x = _this.clientXScale;
+      client.y = _this.clientYScale(client.id);
+      client.radius = _this.serverWidth / 2;
+      client.fixed = true;
+    }
+  })(this));
+
+  this.drawClients(clients);
+  this.drawServers(servers);
+  // this.setupForceLayout();
 }
 
 Visualizer.prototype.visualize = function(message) {
   message.x = message.source.x;
   message.y = message.source.y;
   message.r = this.messageWidth / 2;
-  this.links.push({
-    source: message,
-    target: this.nodes.find(function(node) {
-      return node.constructor.name === message.target.constructor.name &&
-        node.id === message.target.id;
-    })
-  });
-  this.nodes.push(message);
-}
 
-Visualizer.prototype.setupForceLayout = function() {
-  if (this.force != null) {
-    this.force.stop();
-    delete this.force;
-  }
-  this.force = d3.layout.force().size([this.width, this.height])
-    .gravity(-0.005).charge(function(d, i) {
-      if (d instanceof Server) {
-        return 0;
-      } else {
-        return -10;
-      }
-    })
-    .friction(0.89)
-    .linkDistance((function(_this) {
-      return function(d, i) {
-        if (d instanceof Response) {
-          return 0;
-        } else if (d instanceof Request) {
-          if (d.isPending) {
-            return this.pendingLinkLength;
-          } else {
-            return 0;
-          }
-        } else {
-          return 0;
+  this.drawMessage(message);
+  this.drawLink(message);
+
+  // animation
+  var msg = this.svg.selectAll("circle.message" + message.id);
+  msg.transition().ease('cubic-in-out').duration(1000)
+    .attr('cx', message.target.x).attr('cy', message.target.y)
+    .each("end", (function(_this) {
+      return function() {
+        if (message.type !== EVENTTYPE.WRITE && message.type !== EVENTTYPE.UPDATE) {
+          msg.remove();
         }
       }
-    })(this))
-    .nodes(this.nodes)
-    .links(this.links)
-    .on('tick', (function(_this) {
+    })(this));
+  var link = this.svg.selectAll("line.link" + message.id);
+  link.transition().ease('cubic-in-out').duration(1000)
+    .attr('x1', message.target.x)
+    .attr('y1', message.target.y)
+    .each("end", (function(_this) {
       return function() {
-        _this.drawCommunication();
+        link.remove();
       }
     })(this));
-
-  return this.force.start();
 }
 
-Visualizer.prototype.drawCommunication = function() {
-  this.drawMessage();
-  return this.drawLinks();
-}
-
-Visualizer.prototype.drawLinks = function() {
-  this.link = this.svg.selectAll("line.link")
-    .data(this.nodes.filter(function(n) {
-      return n instanceof Message;
-    }));
+Visualizer.prototype.drawLink = function(message) {
+  this.link = this.svg.selectAll("line.link" + message.id)
+    .data([message]);
   this.link.enter().append("svg:line")
     .attr("x1", function(d) {
       return d.source.x;
@@ -108,18 +90,16 @@ Visualizer.prototype.drawLinks = function() {
       return d.target.y;
     })
     .attr("class", function(d) {
-      return "link " + d.type;
+      return "link" + d.id + " " + d.type;
     });
 
   return this.link.exit().remove();
 }
 
-Visualizer.prototype.drawMessage = function() {
-  this.messageCircles = this.svg.selectAll("circle.message")
-    .data(this.nodes.filter(function(n) {
-      return n instanceof Message;
-    }));
-  this.messageCircles.enter()
+Visualizer.prototype.drawMessage = function(message) {
+  this.message = this.svg.selectAll("circle.message" + message.id)
+    .data([message]);
+  this.message.enter()
     .append("svg:circle")
     .attr("cx", function(d) {
       return d.source.x;
@@ -127,7 +107,7 @@ Visualizer.prototype.drawMessage = function() {
     .attr("cy", function(d) {
       return d.source.y;
     })
-    .attr("class", "message")
+    .attr("class", "message" + message.id)
     .attr("r", function(d) {
       return d.r;
     })
@@ -140,24 +120,12 @@ Visualizer.prototype.drawMessage = function() {
         }
       }
     })(this));
-  return this.messageCircles.exit().remove();
+  return this.message.exit().remove();
 }
 
-Visualizer.prototype.drawServers = function() {
-  this.nodes.forEach((function(_this) {
-    return function(node) {
-      if (node instanceof Server) {
-        node.x = _this.serverX(node.id * (Math.PI * 2) / _this.serverCnt);
-        node.y = _this.serverY(node.id * (Math.PI * 2) / _this.serverCnt);
-        node.radius = _this.serverWidth / 2;
-        node.fixed = true;
-      }
-    }
-  })(this));
+Visualizer.prototype.drawServers = function(servers) {
   return this.serverCircles = this.svg.selectAll("circle.server")
-    .data(this.nodes.filter(function(n) {
-      return n instanceof Server;
-    })).enter().append("svg:circle").attr("fill", "#00ADA7")
+    .data(servers).enter().append("svg:circle").attr("fill", "#00ADA7")
     .attr("class", "server").attr("r", function(server) {
       return server.radius;
     }).attr("cx", function(server) {
@@ -167,21 +135,9 @@ Visualizer.prototype.drawServers = function() {
     });
 }
 
-Visualizer.prototype.drawClients = function() {
-  this.nodes.forEach((function(_this) {
-    return function(node) {
-      if (node instanceof Client) {
-        node.x = _this.clientXScale;
-        node.y = _this.clientYScale(node.id);
-        node.radius = _this.serverWidth / 2;
-        node.fixed = true;
-      }
-    }
-  })(this));
+Visualizer.prototype.drawClients = function(clients) {
   return this.clientCircles = this.svg.selectAll("circle.client")
-    .data(this.nodes.filter(function(n) {
-      return n instanceof Client;
-    }))
+    .data(clients)
     .enter().append("svg:circle").attr("fill", "#DE3961")
     .attr("class", "client").attr("r", function(client) {
       return client.radius;

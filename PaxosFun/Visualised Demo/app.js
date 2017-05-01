@@ -65,7 +65,7 @@ Response.prototype.constructor = Response;
 function Network() {
   this.listeners = {};
   this.visualizer;
-  this.latency = 100;
+  this.latency = 1000;
 }
 
 Network.prototype.listen = function(name, obj, func) {
@@ -344,7 +344,7 @@ clients = clients.reduce(function(acc, client) {
   return acc;
 }, {});
 
-for (var i = 0; i < 5; i++) {
+for (var i = 0; i < 1; i++) {
   setTimeout(() => {
     var cindex;
     if (Math.random() > 0.5) {
