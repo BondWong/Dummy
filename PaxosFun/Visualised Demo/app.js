@@ -51,14 +51,15 @@ function Message(id, processId, type, from, to, source, target) {
 function Request(id, processId, data, type, from, to, source, target) {
   Message.call(this, id, processId, type, from, to, source, target);
   this.data = data;
+  this.isPending = false;
 }
-Request.prototype = Object.create(Message);
+Request.prototype = Object.create(Message.prototype);
 Request.prototype.constructor = Request;
 
 function Response(id, processId, type, from, to, source, target) {
   Message.call(this, id, processId, type, from, to, source, target);
 }
-Response.prototype = Object.create(Message);
+Response.prototype = Object.create(Message.prototype);
 Response.prototype.constructor = Response;
 
 function Network() {
@@ -94,7 +95,7 @@ Network.prototype.broadcast = function(name, message) {
         var func = this.listeners[name][message.to][1];
         obj[func](message);
 
-        this.visualizer.visualize(name, message);
+        this.visualizer.visualize(message);
       } catch (e) {
         console.error(e);
         console.error(message.type + " processId: " + message.processId + " " + ": from: " + message.from + " to: " + message.to);
@@ -331,8 +332,7 @@ var clients = [(function() {
 })()];
 
 var visualizer = new Visualizer();
-visualizer.drawServers(servers);
-visualizer.drawClients(clients);
+visualizer.init(clients, servers);
 network.visualizer = visualizer;
 
 servers = servers.reduce(function(acc, server) {
@@ -354,10 +354,12 @@ for (var i = 0; i < 5; i++) {
     }
 
     var sindex = parseInt(Math.random() * (serverCnt - 1));
-    clients[cindex].request(new Request(getMessageId(), getProcessId(), {
+    var request = new Request(getMessageId(), getProcessId(), {
         version: getVersion(),
         value: i
       }, EVENTTYPE.WRITE,
-      clients[cindex].id, servers[sindex].id, clients[cindex], servers[sindex]));
+      clients[cindex].id, servers[sindex].id, clients[cindex], servers[sindex]);
+    request.isPending = true;
+    clients[cindex].request(request);
   }, parseInt(Math.random() * 1000) + 500);
 }

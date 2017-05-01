@@ -26,13 +26,13 @@ function Request(processId, data, type, from, to) {
   Message.call(this, processId, type, from, to);
   this.data = data;
 }
-Request.prototype = Object.create(Message);
+Request.prototype = Object.create(Message.prototype);
 Request.prototype.constructor = Request;
 
 function Response(processId, type, from, to) {
   Message.call(this, processId, type, from, to);
 }
-Response.prototype = Object.create(Message);
+Response.prototype = Object.create(Message.prototype);
 Response.prototype.constructor = Response;
 
 function Network() {
