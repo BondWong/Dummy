@@ -11,7 +11,12 @@ function Visualizer() {
   this.pendingLinkLength = (this.requestWidth / 2) + (this.serverWidth / 2) * 1.07;
   this.serverCnt = 0;
   this.clientCnt = 0;
-  this.colors = ["#B3EECC", "#ecb3ee"];
+  this.colors = ["royalblue ", "lime", "tomato"]; // write, update, promise, commit, cancel, reject
+  this.messageSize = {
+    external: 2,
+    internal: 4
+  }; // write, update, promise, commit, cancel, reject
+  this.latency = 0;
 }
 Visualizer.prototype.width = 960;
 Visualizer.prototype.height = 680;
@@ -32,7 +37,7 @@ Visualizer.prototype.init = function(clients, servers) {
   clients.forEach((function(_this) {
     return function(client) {
       client.x = _this.clientXScale;
-      client.y = _this.clientYScale(client.id);
+      client.y = _this.clientYScale(-client.id - 1);
       client.radius = _this.serverWidth / 2;
       client.fixed = true;
     }
@@ -40,30 +45,26 @@ Visualizer.prototype.init = function(clients, servers) {
 
   this.drawClients(clients);
   this.drawServers(servers);
-  // this.setupForceLayout();
 }
 
 Visualizer.prototype.visualize = function(message) {
   message.x = message.source.x;
   message.y = message.source.y;
-  message.r = this.messageWidth / 2;
 
   this.drawMessage(message);
   this.drawLink(message);
 
   // animation
   var msg = this.svg.selectAll("circle.message" + message.id);
-  msg.transition().ease('cubic-in-out').duration(1000)
+  msg.transition().ease('cubic-in-out').duration(this.latency)
     .attr('cx', message.target.x).attr('cy', message.target.y)
     .each("end", (function(_this) {
       return function() {
-        if (message.type !== EVENTTYPE.WRITE && message.type !== EVENTTYPE.UPDATE) {
-          msg.remove();
-        }
+        msg.remove();
       }
     })(this));
   var link = this.svg.selectAll("line.link" + message.id);
-  link.transition().ease('cubic-in-out').duration(1000)
+  link.transition().ease('cubic-in-out').duration(this.latency)
     .attr('x1', message.target.x)
     .attr('y1', message.target.y)
     .each("end", (function(_this) {
@@ -108,19 +109,36 @@ Visualizer.prototype.drawMessage = function(message) {
       return d.source.y;
     })
     .attr("class", "message" + message.id)
-    .attr("r", function(d) {
-      return d.r;
-    })
+    .attr("r", (function(_this) {
+      return function(d) {
+        if (d.source instanceof Server && d.target instanceof Server) {
+          return _this.messageWidth / _this.messageSize["internal"];
+        } else {
+          return _this.messageWidth / _this.messageSize["external"];
+        }
+      }
+    })(this))
     .attr("fill", (function(_this) {
       return function(d) {
         if (d instanceof Request) {
-          return _this.colors[1];
+          if ((d.type === EVENTTYPE.WRITE ||
+              d.type === EVENTTYPE.UPDATE ||
+              d.type === EVENTTYPE.COMMIT)) {
+            return _this.colors[0];
+          } else {
+            // cancel
+            return _this.colors[2];
+          }
         } else {
-          return _this.colors[0];
+          if (d.type === EVENTTYPE.PROMISE) {
+            return _this.colors[1];
+          } else {
+            return _this.colors[2];
+          }
         }
       }
     })(this));
-  return this.message.exit().remove();
+  this.message.exit().remove();
 }
 
 Visualizer.prototype.drawServers = function(servers) {

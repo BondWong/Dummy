@@ -11,8 +11,6 @@ network.register(nw.EVENTTYPE.PROMISE);
 network.register(nw.EVENTTYPE.COMMIT);
 network.register(nw.EVENTTYPE.CANCEL);
 network.register(nw.EVENTTYPE.REJECT);
-network.register(nw.EVENTTYPE.SUCCESS);
-network.register(nw.EVENTTYPE.FAIL);
 
 var servers = [...Array(10).keys()].map(function() {
   var server = new node.Server(utils.getId(), network);
@@ -34,13 +32,13 @@ servers.forEach(function(server) {
 
 var clients = [(function() {
   var client = new node.Client(utils.getId(), network);
-  client.listen(nw.EVENTTYPE.SUCCESS, "handleResponse");
-  client.listen(nw.EVENTTYPE.FAIL, "handleResponse");
+  client.listen(nw.EVENTTYPE.PROMISE, "handleResponse");
+  client.listen(nw.EVENTTYPE.REJECT, "handleResponse");
   return client;
 })(), (function() {
   var client = new node.Client(utils.getId(), network);
-  client.listen(nw.EVENTTYPE.SUCCESS, "handleResponse");
-  client.listen(nw.EVENTTYPE.FAIL, "handleResponse");
+  client.listen(nw.EVENTTYPE.PROMISE, "handleResponse");
+  client.listen(nw.EVENTTYPE.REJECT, "handleResponse");
   return client;
 })()];
 

@@ -10,9 +10,7 @@ const EVENTTYPE = {
   PROMISE: "promise",
   COMMIT: "commit",
   CANCEL: "cancel",
-  REJECT: "reject",
-  SUCCESS: "success",
-  FAIL: "fail"
+  REJECT: "reject"
 };
 
 function Message(processId, type, from, to) {
@@ -56,6 +54,8 @@ Network.prototype.broadcast = function(name, message) {
   if (this.listeners[name]) {
     utils.wait(this.latency).then(() => {
       var obj = this.listeners[name][message.to][0];
+      var func = this.listeners[name][message.to][1];
+      obj[func](message);
       console.log(message.type + " processId: " + message.processId + " " + ": from: " + message.from + " to: " + message.to);
       if (obj.constructor.name === 'Server') {
         console.log("Destination: " + obj.constructor.name +
@@ -63,8 +63,6 @@ Network.prototype.broadcast = function(name, message) {
       } else {
         console.log("Destination: " + obj.constructor.name);
       }
-      var func = this.listeners[name][message.to][1];
-      obj[func](message);
     });
   }
 }

@@ -24,10 +24,10 @@ Client.prototype = Object.create(Node.prototype);
 Client.prototype.constructor = Client;
 Client.prototype.handleResponse = function(message) {
   switch (message.type) {
-    case network.EVENTTYPE.SUCCESS:
+    case network.EVENTTYPE.PROMISE:
       console.log(message);
       break;
-    case network.EVENTTYPE.FAIL:
+    case network.EVENTTYPE.REJECT:
       console.log(message);
       break;
   }

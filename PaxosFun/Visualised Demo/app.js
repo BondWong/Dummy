@@ -34,8 +34,6 @@ const EVENTTYPE = {
   COMMIT: "commit",
   CANCEL: "cancel",
   REJECT: "reject",
-  SUCCESS: "success",
-  FAIL: "fail"
 };
 
 function Message(id, processId, type, from, to, source, target) {
@@ -65,7 +63,7 @@ Response.prototype.constructor = Response;
 function Network() {
   this.listeners = {};
   this.visualizer;
-  this.latency = 1000;
+  this.latency = 2000;
 }
 
 Network.prototype.listen = function(name, obj, func) {
@@ -85,6 +83,8 @@ Network.prototype.broadcast = function(name, message) {
     wait(this.latency).then(() => {
       try {
         var obj = this.listeners[name][message.to][0];
+        var func = this.listeners[name][message.to][1];
+        obj[func](message);
         console.log(message.type + " processId: " + message.processId + " " + ": from: " + message.from + " to: " + message.to);
         if (obj.constructor.name === 'Server') {
           console.log("Destination: " + obj.constructor.name +
@@ -92,13 +92,12 @@ Network.prototype.broadcast = function(name, message) {
         } else {
           console.log("Destination: " + obj.constructor.name);
         }
-        var func = this.listeners[name][message.to][1];
-        obj[func](message);
 
         this.visualizer.visualize(message);
       } catch (e) {
         console.error(e);
         console.error(message.type + " processId: " + message.processId + " " + ": from: " + message.from + " to: " + message.to);
+        console.log(this.listeners[name]);
       }
     });
   }
@@ -119,8 +118,8 @@ IdleState.prototype = Object.create(State.prototype);
 IdleState.prototype.constructor = IdleState;
 IdleState.prototype.write = function(server, message) {
   if (message.data.version <= server.data.version) {
-    server.response(new Response(getMessageId(), message.processId, EVENTTYPE.FAIL,
-      message.to, message.from, message.source, message.target));
+    server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
+      message.to, message.from, message.target, message.source));
     return false;
   }
   server.state = new PrepareState();
@@ -134,13 +133,13 @@ IdleState.prototype.write = function(server, message) {
 };
 IdleState.prototype.update = function(server, message) {
   if (message.data.version <= server.data.version) {
-    server.response(new Response(message.processId, EVENTTYPE.REJECT, message.to, message.from, message.source, message.target));
+    server.response(new Response(message.processId, EVENTTYPE.REJECT, message.to, message.from, message.target, message.from));
     return false;
   }
   server.state = new ReadyState();
   server.localData = message.data;
   server.request(new Response(getMessageId(), message.processId, EVENTTYPE.PROMISE,
-    message.to, message.from, message.source, message.target));
+    message.to, message.from, message.target, message.source));
 };
 
 function PrepareState() {
@@ -149,13 +148,13 @@ function PrepareState() {
 PrepareState.prototype = Object.create(State.prototype);
 PrepareState.prototype.constructor = PrepareState;
 PrepareState.prototype.write = function(server, message) {
-  server.response(new Response(getMessageId(), message.processId, EVENTTYPE.FAIL,
-    message.to, message.from, message.source, message.target));
+  server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
+    message.to, message.from, message.target, message.source));
   return false;
 };
 PrepareState.prototype.update = function(server, message) {
-  server.response(new Response(getMessageId(), message.processId, EVENTTYPE.FAIL,
-    message.to, message.from, message.source, message.target));
+  server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
+    message.to, message.from, message.target, message.source));
   return false;
 };
 PrepareState.prototype.handle = function(server, message) {
@@ -178,7 +177,7 @@ PrepareState.prototype.handle = function(server, message) {
       });
       server["responses"] = [];
       server.state = new IdleState();
-      server.response(new Response(getMessageId(), message.processId, EVENTTYPE.SUCCESS,
+      server.response(new Response(getMessageId(), message.processId, EVENTTYPE.PROMISE,
         server.id, server.clientId, server, server.source));
     } else {
       server.neighbors.forEach(function(neighbor) {
@@ -187,7 +186,7 @@ PrepareState.prototype.handle = function(server, message) {
       });
       server["responses"] = [];
       server.state = new IdleState();
-      server.response(new Response(getMessageId(), message.processId, "faile",
+      server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
         server.id, server.clientId, server, server.source));
     }
   }
@@ -199,13 +198,13 @@ function ReadyState() {
 ReadyState.prototype = Object.create(State.prototype);
 ReadyState.prototype.constructor = ReadyState;
 ReadyState.prototype.write = function(server, message) {
-  server.response(new Response(getMessageId(), message.processId, EVENTTYPE.FAIL,
-    message.to, message.from, message.source, message.target));
+  server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
+    message.to, message.from, message.target, message.source));
   return false;
 };
 ReadyState.prototype.update = function(server, message) {
-  server.response(new Response(getMessageId(), message.processId, EVENTTYPE.FAIL,
-    message.to, message.from, message.source, message.target));
+  server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
+    message.to, message.from, message.target, message.source));
   return false;
 };
 ReadyState.prototype.commit = function(server, message) {
@@ -238,10 +237,10 @@ Client.prototype = Object.create(Node.prototype);
 Client.prototype.constructor = Client;
 Client.prototype.handleResponse = function(message) {
   switch (message.type) {
-    case EVENTTYPE.SUCCESS:
+    case EVENTTYPE.PROMISE:
       console.log(message);
       break;
-    case EVENTTYPE.FAIL:
+    case EVENTTYPE.REJECT:
       console.log(message);
       break;
   }
@@ -298,8 +297,6 @@ network.register(EVENTTYPE.PROMISE);
 network.register(EVENTTYPE.COMMIT);
 network.register(EVENTTYPE.CANCEL);
 network.register(EVENTTYPE.REJECT);
-network.register(EVENTTYPE.SUCCESS);
-network.register(EVENTTYPE.FAIL);
 
 var servers = [...Array(serverCnt).keys()].map(function() {
   var server = new Server(getId(), network);
@@ -320,19 +317,20 @@ servers.forEach(function(server) {
 });
 
 var clients = [(function() {
-  var client = new Client(0, network);
-  client.listen(EVENTTYPE.SUCCESS, "handleResponse");
-  client.listen(EVENTTYPE.FAIL, "handleResponse");
+  var client = new Client(-1, network);
+  client.listen(EVENTTYPE.PROMISE, "handleResponse");
+  client.listen(EVENTTYPE.REJECT, "handleResponse");
   return client;
 })(), (function() {
-  var client = new Client(1, network);
-  client.listen(EVENTTYPE.SUCCESS, "handleResponse");
-  client.listen(EVENTTYPE.FAIL, "handleResponse");
+  var client = new Client(-2, network);
+  client.listen(EVENTTYPE.PROMISE, "handleResponse");
+  client.listen(EVENTTYPE.REJECT, "handleResponse");
   return client;
 })()];
 
 var visualizer = new Visualizer();
 visualizer.init(clients, servers);
+visualizer.latency = network.latency;
 network.visualizer = visualizer;
 
 servers = servers.reduce(function(acc, server) {
@@ -344,13 +342,13 @@ clients = clients.reduce(function(acc, client) {
   return acc;
 }, {});
 
-for (var i = 0; i < 1; i++) {
+for (var i = 0; i < 2; i++) {
   setTimeout(() => {
     var cindex;
     if (Math.random() > 0.5) {
-      cindex = 1;
+      cindex = -1;
     } else {
-      cindex = 0;
+      cindex = -2;
     }
 
     var sindex = parseInt(Math.random() * (serverCnt - 1));
@@ -361,5 +359,5 @@ for (var i = 0; i < 1; i++) {
       clients[cindex].id, servers[sindex].id, clients[cindex], servers[sindex]);
     request.isPending = true;
     clients[cindex].request(request);
-  }, parseInt(Math.random() * 1000) + 500);
+  }, parseInt(Math.random() * 1000));
 }
