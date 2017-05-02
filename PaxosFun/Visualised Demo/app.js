@@ -44,6 +44,9 @@ function Message(id, processId, type, from, to, source, target) {
   this.to = to;
   this.source = source;
   this.target = target;
+  this.isPending = false;
+  this.isCanceled = false;
+  this.isRejected = false;
 }
 
 function Request(id, processId, data, type, from, to, source, target) {
@@ -118,6 +121,8 @@ IdleState.prototype = Object.create(State.prototype);
 IdleState.prototype.constructor = IdleState;
 IdleState.prototype.write = function(server, message) {
   if (message.data.version <= server.data.version) {
+    message.isRejected = true;
+    server.network.visualizer.visualize(message);
     server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
       message.to, message.from, message.target, message.source));
     return false;
@@ -125,19 +130,25 @@ IdleState.prototype.write = function(server, message) {
   server.state = new PrepareState();
   server.clientId = message.from;
   server.source = message.source;
-  server.localData = message.data;
+  server.pendingMessage = message;
+  server.pendingMessage.isPending = true;
   server.neighbors.forEach(function(neighbor) {
-    server.request(new Request(getMessageId(), message.processId, message.data, EVENTTYPE.UPDATE,
-      server.id, neighbor.id, server, neighbor));
+    var request = new Request(getMessageId(), message.processId, message.data, EVENTTYPE.UPDATE,
+      server.id, neighbor.id, server, neighbor);
+    request.isPending = true;
+    server.request(request);
   });
 };
 IdleState.prototype.update = function(server, message) {
   if (message.data.version <= server.data.version) {
+    message.isRejected = true;
+    server.network.visualizer.visualize(message);
     server.response(new Response(message.processId, EVENTTYPE.REJECT, message.to, message.from, message.target, message.from));
     return false;
   }
   server.state = new ReadyState();
-  server.localData = message.data;
+  server.pendingMessage = message;
+  server.pendingMessage.isPending = true;
   server.request(new Response(getMessageId(), message.processId, EVENTTYPE.PROMISE,
     message.to, message.from, message.target, message.source));
 };
@@ -148,11 +159,15 @@ function PrepareState() {
 PrepareState.prototype = Object.create(State.prototype);
 PrepareState.prototype.constructor = PrepareState;
 PrepareState.prototype.write = function(server, message) {
+  message.isRejected = true;
+  server.network.visualizer.visualize(message);
   server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
     message.to, message.from, message.target, message.source));
   return false;
 };
 PrepareState.prototype.update = function(server, message) {
+  message.isRejected = true;
+  server.network.visualizer.visualize(message);
   server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
     message.to, message.from, message.target, message.source));
   return false;
@@ -170,20 +185,29 @@ PrepareState.prototype.handle = function(server, message) {
       }
     });
     if (promiseCnt == server.neighbors.length) {
-      server.data = server.localData;
       server.neighbors.forEach(function(neighbor) {
         server.request(new Request(getMessageId(), message.processId, message.data,
           EVENTTYPE.COMMIT, server.id, neighbor.id, server, neighbor));
       });
+      server.data = server.pendingMessage.data;
+      server.pendingMessage.isPending = false;
       server["responses"] = [];
       server.state = new IdleState();
-      server.response(new Response(getMessageId(), message.processId, EVENTTYPE.PROMISE,
-        server.id, server.clientId, server, server.source));
+      // make animation make more sense
+      wait(server.network.latency).then(() => {
+        server.network.visualizer.visualize(server.pendingMessage, server.dbLatency);
+        server.response(new Response(getMessageId(), message.processId, EVENTTYPE.PROMISE,
+          server.id, server.clientId, server, server.source));
+      });
     } else {
       server.neighbors.forEach(function(neighbor) {
         server.request(new Request(getMessageId(), message.processId, message.data,
           EVENTTYPE.CANCEL, server.id, neighbor.id, server, neighbor));
       });
+      server.pendingMessage.isPending = false;
+      // remove
+      server.pendingMessage.isCanceled = true;
+      server.network.visualizer.visualize(server.pendingMessage);
       server["responses"] = [];
       server.state = new IdleState();
       server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
@@ -198,20 +222,33 @@ function ReadyState() {
 ReadyState.prototype = Object.create(State.prototype);
 ReadyState.prototype.constructor = ReadyState;
 ReadyState.prototype.write = function(server, message) {
+  message.isRejected = true;
+  server.network.visualizer.visualize(message);
   server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
     message.to, message.from, message.target, message.source));
   return false;
 };
 ReadyState.prototype.update = function(server, message) {
+  message.isRejected = true;
+  server.network.visualizer.visualize(message);
   server.response(new Response(getMessageId(), message.processId, EVENTTYPE.REJECT,
     message.to, message.from, message.target, message.source));
   return false;
 };
 ReadyState.prototype.commit = function(server, message) {
-  server.data = server.localData;
+  server.data = server.pendingMessage.data;
+  server.pendingMessage.isPending = false;
   server.state = new IdleState();
+  // make the animation make more sense
+  wait(server.network.latency).then(() => {
+    server.network.visualizer.visualize(server.pendingMessage, server.dbLatency);
+  })
 };
 ReadyState.prototype.cancel = function(server, message) {
+  server.pendingMessage.isPending = false;
+  // remove
+  server.pendingMessage.isCanceled = true;
+  server.network.visualizer.visualize(server.pendingMessage);
   server.state = new IdleState();
 }
 
@@ -252,10 +289,11 @@ function Server(id, network, quorum) {
     version: -1,
     value: 0
   };
-  this.localData = {};
+  this.pendingMessage;
   this.neighbors = [];
   this.quorum = quorum;
   this.state = new IdleState();
+  this.dbLatency = 500;
 }
 Server.prototype = Object.create(Node.prototype);
 Server.prototype.constructor = Server;
@@ -342,22 +380,26 @@ clients = clients.reduce(function(acc, client) {
   return acc;
 }, {});
 
-for (var i = 0; i < 2; i++) {
-  setTimeout(() => {
-    var cindex;
-    if (Math.random() > 0.5) {
-      cindex = -1;
-    } else {
-      cindex = -2;
-    }
+var action = () => {
+  var cindex;
+  if (Math.random() > 0.5) {
+    cindex = -1;
+  } else {
+    cindex = -2;
+  }
 
-    var sindex = parseInt(Math.random() * (serverCnt - 1));
-    var request = new Request(getMessageId(), getProcessId(), {
-        version: getVersion(),
-        value: i
-      }, EVENTTYPE.WRITE,
-      clients[cindex].id, servers[sindex].id, clients[cindex], servers[sindex]);
-    request.isPending = true;
-    clients[cindex].request(request);
-  }, parseInt(Math.random() * 1000));
+  var sindex = parseInt(Math.random() * (serverCnt - 1));
+  var request = new Request(getMessageId(), getProcessId(), {
+      version: getVersion(),
+      value: i
+    }, EVENTTYPE.WRITE,
+    clients[cindex].id, servers[sindex].id, clients[cindex], servers[sindex]);
+  request.isPending = true;
+  clients[cindex].request(request);
+};
+
+var time = 0;
+for (var i = 0; i < 10; i++) {
+  time += Math.random() * 1000 + 3000;
+  wait(time).then(action);
 }
