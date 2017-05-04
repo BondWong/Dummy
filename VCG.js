@@ -71,8 +71,8 @@ function VCG(n, m) {
   return prices;
 }
 
-var n = [2, 6, 10, 14];
-var m = [10, 15, 20, 25];
+var n = [6, 6, 6, 6, 6];
+var m = [10, 14, 18, 22, 26];
 for (var i = 0; i < n.length; i++) {
   console.log("================================");
   console.log("n: " + n[i] + " m: " + m[i]);
