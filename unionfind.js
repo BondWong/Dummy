@@ -56,17 +56,37 @@ function group(nodes, links) {
   });
 
   // for each unioned set, group nodes together
-  var cnt = 1;
-  var groups = {};
-  nodes = nodes.forEach(function(node, i) {
+  var id = 1;
+  var groupIdCnt = {};
+  var groupIds = {};
+  nodes.forEach(function(node, i) {
     var f = find(node.id);
-    if (typeof group[f] === 'undefined') {
-      group[f] = cnt++;
+    if (typeof groupIds[f] === 'undefined') {
+      groupIds[f] = id;
+      groupIdCnt[id] = 1;
+      id++;
+    } else {
+      groupIdCnt[groupIds[f]]++;
     }
-    node['group'] = group[f];
+  });
+
+  var groups = {};
+  nodes.forEach(function(node, i) {
+    var f = find(node.id);
+    if (groupIdCnt[groupIds[f]] === 1) {
+      node['group'] = 0;
+    } else {
+      node['group'] = groupIds[f];
+    }
+
+    if (typeof groups[node['group']] === 'undefined') {
+      groups[node['group']] = [];
+    }
+    groups[node['group']].push(node);
   });
 
   return Object.values(groups);
+
 }
 
 // find father of each set
@@ -86,5 +106,6 @@ function union(node1, node2) {
 }
 
 // O(n), since we visit each node once
-group(nodes, links);
+var groups = group(nodes, links);
 console.log(nodes);
+console.log(groups);
