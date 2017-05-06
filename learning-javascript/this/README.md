@@ -4,14 +4,14 @@ The `this` keyword works differently in JavaScript compared to other languages. 
 
 ## Global context
 
-`this` equals to global object in Node.js. Global object is the object that contains a set of globally accessible objects in all modules. 
+`this` equals to global object in Node.js. Global object is the object that contains a set of globally accessible objects in all modules.
 
 `'use strict';
 console.log(this === global); // return true`
 
 ## Function context
 
-`this` equals to whatever it was set to when entering the execution context. 
+`this` equals to whatever it was set to when entering the execution context.
 `
 'use strict';
 function f() {
@@ -100,4 +100,3 @@ console.log(h()); // hey
 
 var o = {a: 37, f: f, g: g, h: h};
 console.log(o.f(), o.g(), o.h()); // 37, hi, hi
-
