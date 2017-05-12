@@ -16,7 +16,14 @@ const config = {
   compression_s2c: "none",
   compression_c2s: "none",
   lang_s2c: "",
-  lang_c2s: ""
+  lang_c2s: "",
+  20: "SSH_MSG_KEXINIT",
+  21: "SSH_MSG_NEWKEYS",
+  30: "SSH_MSG_KEXDH_INIT",
+  31: "SSH_MSG_KEX_DH_GEX_GROUP",
+  32: "SSH_MSG_KEX_DH_GEX_INIT",
+  33: "SSH_MSG_KEX_DH_GEX_REPLY",
+  34: "SSH_MSG_KEX_DH_GEX_REQUEST"
 }
 
 const SSH_MSG_DISCONNECT = 1;
@@ -59,18 +66,21 @@ client.connect(22, '45.33.70.244');
 
 client.on('data', function(data) {
   if (status[0] === STEP.VERSIONEXCHANGE) {
+    printStatus(status);
     // exchange version
-    console.log('Received: ' + data);
+    console.log('Received V_S: ' + data);
     var packet = version;
-    console.log('Sent:' + packet);
+    console.log('Sent C_S: ' + packet);
     client.write(packet, function() {
       status[0] = STEP.KEXINIT;
     });
   } else if (status[0] === STEP.KEXINIT) {
     var msgCode = data.readUInt8(4 + 1);
     status[1] = msgCode;
+    printStatus(status);
 
     if (status[1] === SSH_MSG_KEXINIT) {
+      console.log('Received I_C: ' + data.slice(4 + 1 + 1 + 16).toString('ascii'));
       var payload = Buffer.alloc(1);
       payload.writeUInt8(SSH_MSG_KEXINIT);
       var cookie = Buffer.from('E943B8EAD89BC6BD6861A54CFD333DB0', 'hex');
@@ -135,6 +145,8 @@ client.on('data', function(data) {
       lang_s2cLen.writeUInt32BE(config.lang_s2c.length);
       payload = Buffer.concat([payload, lang_s2cLen], 4 + payload.length);
       payload = Buffer.concat([payload, lang_s2c], lang_s2c.length + payload.length);
+      printLiner();
+      console.log("Sent I_S: " + payload.toString('ascii'));
 
       var temp = Buffer.alloc(1);
       temp.writeUInt8(0);
@@ -153,6 +165,14 @@ client.on('data', function(data) {
       packet = Buffer.concat([packet, pad], packet.length + pad.length);
 
       client.write(packet, function() {
+        printLiner();
+        console.log("Guessing:");
+        console.log("kex = diffie-hellman-group-exchange-sha256");
+        console.log("server_host_key = ssh-rsa");
+        console.log("encryption = aes128-ctr");
+        console.log("mac = hmac-sha1");
+        console.log("compression = none");
+
         var payload = Buffer.alloc(1);
         payload.writeUInt8(SSH_MSG_KEX_DH_GEX_REQUEST);
         var min = Buffer.alloc(4);
@@ -162,6 +182,11 @@ client.on('data', function(data) {
         var max = Buffer.alloc(4);
         max.writeUInt32BE(MAX);
         payload = Buffer.concat([payload, min, n, max], payload.length + min.length + n.length + max.length);
+        printLiner();
+        console.log("Size:");
+        console.log("min = " + min);
+        console.log("prefered = " + n);
+        console.log("max = " + max);
 
         var padding = getPadding(payload.length + 5, 8);
         var pad = Buffer.alloc(padding);
@@ -181,15 +206,19 @@ client.on('data', function(data) {
 
       var pLen = data.readUInt32BE(4 + 1 + 1);
       var p = data.slice(4 + 1 + 1 + 4, 4 + 1 + 1 + 4 + pLen).toString('hex');
+      console.log("p = " + p);
       p = BigInt(p, 16);
 
       var gLen = data.readUInt32BE(4 + 1 + 1 + 4 + pLen);
       var g = data.slice(4 + 1 + 1 + 4 + pLen, 4 + 1 + 1 + 4 + pLen + gLen).toString('hex');
+      console.log("g = " + g);
       g = BigInt(g, 16);
       g = g.isZero() ? BigInt('2', 16) : g;
 
       var x = BigInt.randBetween(1, (p.minus(1)).divide(2));
       var e = g.modPow(x, p);
+      console.log("x = " + x.toString(16));
+      console.log("e = " + e.toString(16));
 
       var payload = Buffer.alloc(1);
       payload.writeUInt8(SSH_MSG_KEX_DH_GEX_INIT);
@@ -231,8 +260,10 @@ client.on('data', function(data) {
       var K;
       var H;
       if (verify(sig, H)) {
+        console.log("Verified!");
         var payload = Buffer.alloc(1);
         payload.writeUInt8(SSH_MSG_NEWKEYS);
+        console.log("Sent: SSH_MSG_NEWKEYS");
         var padding = getPadding(payload.length + 5, 8);
         var pad = Buffer.alloc(padding);
         pad.fill(0);
@@ -244,6 +275,7 @@ client.on('data', function(data) {
 
         client.write(packet, function() {
           // done! drop connection
+          console.log("Done! Drop Connection");
           client.end();
         });
       }
@@ -264,6 +296,26 @@ function getPadding(length, blockSize) {
     padding = 16 - length;
   }
   return padding;
+}
+
+function printStatus(status) {
+  var str;
+  if (status[0] === STEP.VERSIONEXCHANGE) {
+    str = "Exchange Version";
+  } else {
+    str = "Key Exchange";
+  }
+  if (typeof status[1] !== 'undefined') {
+    str += " " + config[status[1]];
+  }
+
+  printLiner();
+  console.log(str);
+  printLiner();
+}
+
+function printLiner() {
+  console.log('================================================================================');
 }
 
 function check(K_S) {
