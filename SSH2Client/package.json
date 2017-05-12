@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/JunbangHuang/Dummy/issues"
   },
-  "homepage": "https://github.com/JunbangHuang/Dummy#readme"
+  "homepage": "https://github.com/JunbangHuang/Dummy#readme",
+  "dependencies": {
+    "big-integer": "^1.6.22"
+  }
 }

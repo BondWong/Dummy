@@ -1,8 +1,10 @@
 const net = require('net');
+const BigInt = require('big-integer');
+
 const version = 'SSH-2.0-JH_1.0\r\n';
 const MIN = 1024;
-const PREFERED = 2048;
-const MAX = 2048;
+const PREFERED = 1024;
+const MAX = 8192;
 
 const config = {
   kex: "diffie-hellman-group-exchange-sha256,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1",
@@ -176,11 +178,75 @@ client.on('data', function(data) {
       var packetLength = data.readUInt32BE();
       var padding = data.readUInt8(4);
       var payloadLength = packetLength - padding - 1;
-      var start = 4 + 1 + 1;
-      var length = payloadLength - 1;
-      var pg = data.slice(start, start + length);
-      var p = pg.slice(start, start + PREFERED / 8).toString('hex');
-      var g = pg.slice(start + PREFERED / 8, start + length).toString('hex');
+
+      var pLen = data.readUInt32BE(4 + 1 + 1);
+      var p = data.slice(4 + 1 + 1 + 4, 4 + 1 + 1 + 4 + pLen).toString('hex');
+      p = BigInt(p, 16);
+
+      var gLen = data.readUInt32BE(4 + 1 + 1 + 4 + pLen);
+      var g = data.slice(4 + 1 + 1 + 4 + pLen, 4 + 1 + 1 + 4 + pLen + gLen).toString('hex');
+      g = BigInt(g, 16);
+      g = g.isZero() ? BigInt('2', 16) : g;
+
+      var x = BigInt.randBetween(1, (p.minus(1)).divide(2));
+      var e = g.modPow(x, p);
+
+      var payload = Buffer.alloc(1);
+      payload.writeUInt8(SSH_MSG_KEX_DH_GEX_INIT);
+      e = e.toString(16);
+      e = Buffer.from(e, 'hex');
+      const eLen = Buffer.alloc(4);
+      eLen.writeUInt32BE(e.length);
+      payload = Buffer.concat([payload, eLen], 4 + payload.length);
+      payload = Buffer.concat([payload, e], payload.length + e.length);
+
+      var padding = getPadding(payload.length + 5, 8);
+      var pad = Buffer.alloc(padding);
+      pad.fill(0);
+      var packet = Buffer.alloc(5);
+      packet.writeUInt32BE(payload.length + padding + 1);
+      packet.writeUInt8(padding, 4);
+      packet = Buffer.concat([packet, payload], packet.length + payload.length);
+      packet = Buffer.concat([packet, pad], packet.length + pad.length);
+
+      client.write(packet);
+    } else if (status[1] === SSH_MSG_KEX_DH_GEX_REPLY) {
+      var packetLength = data.readUInt32BE();
+      var padding = data.readUInt8(4);
+      var payloadLength = packetLength - padding - 1;
+      var K_SLen = data.readUInt32BE(4 + 1 + 1);
+      var K_S = data.slice(4 + 1 + 1 + 4, 4 + 1 + 1 + 4 + K_SLen).toString('hex');
+      if (!check(K_S)) {
+        client.close();
+      }
+
+      var fLen = data.readUInt32BE(4 + 1 + 1 + 4 + K_SLen);
+      var f = data.slice(4 + 1 + 1 + 4 + K_SLen + 4, 4 + 1 + 1 + 4 + K_SLen + 4 + fLen).toString('hex');
+      f = BigInt(f, 16);
+
+      var sigLen = data.readUInt32BE(4 + 1 + 1 + 4 + K_SLen + 4 + fLen);
+      var sig = data.slice(4 + 1 + 1 + 4 + K_SLen + 4 + fLen + 4, 4 + 1 + 1 + 4 + K_SLen + 4 + fLen + 4 + sigLen).toString('hex');
+
+      // calculate K and H
+      var K;
+      var H;
+      if (verify(sig, H)) {
+        var payload = Buffer.alloc(1);
+        payload.writeUInt8(SSH_MSG_NEWKEYS);
+        var padding = getPadding(payload.length + 5, 8);
+        var pad = Buffer.alloc(padding);
+        pad.fill(0);
+        var packet = Buffer.alloc(5);
+        packet.writeUInt32BE(payload.length + padding + 1);
+        packet.writeUInt8(padding, 4);
+        packet = Buffer.concat([packet, payload], packet.length + payload.length);
+        packet = Buffer.concat([packet, pad], packet.length + pad.length);
+
+        client.write(packet, function() {
+          // done! drop connection
+          client.end();
+        });
+      }
     }
   }
 });
@@ -194,5 +260,16 @@ function getPadding(length, blockSize) {
   cnt = Math.ceil(cnt);
   var padding = cnt * blockSize - length;
   padding = padding < 4 ? 4 : padding;
+  if (length + padding < 16) {
+    padding = 16 - length;
+  }
   return padding;
+}
+
+function check(K_S) {
+  return true;
+}
+
+function verify(sig, H) {
+  return true;
 }
