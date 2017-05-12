@@ -184,9 +184,9 @@ client.on('data', function(data) {
         payload = Buffer.concat([payload, min, n, max], payload.length + min.length + n.length + max.length);
         printLiner();
         console.log("Size:");
-        console.log("min = " + min);
-        console.log("prefered = " + n);
-        console.log("max = " + max);
+        console.log("min = " + MIN);
+        console.log("prefered = " + PREFERED);
+        console.log("max = " + MAX);
 
         var padding = getPadding(payload.length + 5, 8);
         var pad = Buffer.alloc(padding);
