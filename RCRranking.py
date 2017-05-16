@@ -70,7 +70,7 @@ def dfs(ranking, visiting, vertex):
         dfs(ranking, visiting, neighbor)
     ranking.append(vertex.id)
 
-students = create_bundle_graph(10, 3)
+students = create_bundle_graph(1000, 6)
 rankings = []
 for student in students:
     rankings.append(student.papers)
