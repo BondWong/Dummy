@@ -52,6 +52,6 @@ def create_bundle_graph(n, k):
 
     return students
 
-result = create_bundle_graph(1000, 6)
-for r in result:
-    print(r)
+# result = create_bundle_graph(1000, 6)
+# for r in result:
+#     print(r)
