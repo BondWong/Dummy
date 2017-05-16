@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import random
+from random import randint
 
 class Student:
     def __init__(self, id):
@@ -18,18 +18,40 @@ class Paper:
 def create_bundle_graph(n, k):
     students = [Student(x + 1) for x in range(n)]
     papers = [Paper(x + 1) for x in range(n)]
-    for i in range(k):
-        inavai_pap = set()
-        for j in range(len(students)):
-            paper = None
-            while True:
-                paper = papers[random.randint(0, len(papers) - 1)]
-                if paper.id == students[j].id:
-                    continue
-                if paper.id not in inavai_pap and paper.id not in students[j].papers:
-                    inavai_pap.add(paper.id)
+
+    while True:
+        for i in range(k):
+            inavai_pap = set()
+            for j in range(len(students)):
+                paper = None
+                while True:
+                    paper = papers[randint(0, len(papers) - 1)]
+                    if paper.id == students[j].id:
+                        continue
+                    if paper.id not in inavai_pap and paper.id not in students[j].papers:
+                        inavai_pap.add(paper.id)
+                        break
+                students[j].assign_paper(paper.id)
+        # make sure not more than one paper is assigned to every two people
+        success = True
+        for i in range(n):
+            for j in range(i + 1, n):
+                cnt = 0
+                for l in range(k):
+                    if students[i].papers[l] == students[j].papers[l]:
+                        cnt = cnt + 1
+                    if cnt >= 2:
+                        success = False
+                        break
+                if not success:
                     break
-            students[j].assign_paper(paper.id)
+            if not success:
+                break
+        if success:
+            break
+
     return students
 
-create_bundle_graph(100, 5)
+result = create_bundle_graph(1000, 6)
+for r in result:
+    print(r)
