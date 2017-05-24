@@ -2,9 +2,6 @@ var streamIDs = {
   STREAM_IDS: [{
     name: 'CoinDesk',
     id: 1333467482
-  }, {
-    name: 'Chit_Koo',
-    id: 860956164472938497
   }]
 }
 
@@ -14,7 +11,7 @@ streamIDs.getStreamIDs = function() {
     ids.push(el.id)
   });
 
-  return ids.toString();
+  return ids;
 }
 
 module.exports = streamIDs;

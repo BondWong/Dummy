@@ -1,12 +1,12 @@
 var Twitter = require('twitter');
 var env = require('dotenv').config();
 
+var streamIDs = require('./streams/ids');
 var streamFilter = require('./streams/filters');
 var streamError = require('./streams/errors');
-var streamIDs = require('./streams/ids');
 
 var streamParameters = {
-  follow: streamIDs.getStreamIDs()
+  follow: streamIDs.getStreamIDs().toString()
 };
 
 var client = new Twitter({
