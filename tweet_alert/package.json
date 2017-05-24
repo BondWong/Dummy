@@ -1,0 +1,27 @@
+{
+  "name": "tweet_alert",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JunbangHuang/Dummy.git"
+  },
+  "author": "Bond <wongzeonbong@gmail.com> (Junbang)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JunbangHuang/Dummy/issues"
+  },
+  "homepage": "https://github.com/JunbangHuang/Dummy#readme",
+  "dependencies": {
+    "chalk": "^1.1.3",
+    "dotenv": "^4.0.0",
+    "twitter": "^1.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.11.0"
+  }
+}
