@@ -1,5 +1,5 @@
 var nodemailer = require('nodemailer');
-var env = require('dotenv').config('../../.env');
+
 var chalk = require('chalk');
 
 var mailOptions = {
@@ -10,13 +10,13 @@ var send = function(text) {
   var transporter = nodemailer.createTransport({
     service: 'hotmail',
     auth: {
-      user: env.parsed.from,
-      pass: env.parsed.pass
+      user: process.env.from,
+      pass: process.env.pass
     }
   });
 
-  mailOptions.from = env.parsed.from;
-  mailOptions.to = env.parsed.to;
+  mailOptions.from = process.env.from;
+  mailOptions.to = process.env.to;
   mailOptions.text = text;
   transporter.sendMail(mailOptions, function(error, info) {
     if (error) {
