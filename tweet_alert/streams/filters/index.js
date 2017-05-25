@@ -6,9 +6,11 @@ let ids = new Set(streamIDs.getStreamIDs());
 let breaking = /^BREAKING:.+/;
 
 var streamFilter = function(tweet) {
-  console.log(chalk.white(tweet.text));
   if (ids.has(tweet.user.id) && breaking.test(tweet.text)) {
+    console.log(chalk.green(tweet.text));
     email.send(tweet.text);
+  } else {
+    console.log(chalk.white(tweet.text));
   }
 };
 
