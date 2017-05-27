@@ -1,3 +1,5 @@
+'use strict';
+
 var Twitter = require('twitter');
 require('dotenv').config();
 

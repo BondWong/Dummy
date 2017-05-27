@@ -1,3 +1,5 @@
+'use strict';
+
 var streamIDs = {
   STREAM_IDS: [{
     name: 'CoinDesk',

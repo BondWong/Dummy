@@ -1,3 +1,5 @@
+'use strict';
+
 var streamIDs = require('../ids');
 var email = require('../../email');
 var chalk = require('chalk');
