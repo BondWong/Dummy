@@ -1,0 +1,8 @@
+---
+- hosts: shared_masternode
+  remote_user: ubuntu
+  tasks:
+  - name: masternode status
+    shell: /home/ubuntu/energi/bin/energi-cli masternode status
+    register: result
+  - debug: var=result.stdout_lines
